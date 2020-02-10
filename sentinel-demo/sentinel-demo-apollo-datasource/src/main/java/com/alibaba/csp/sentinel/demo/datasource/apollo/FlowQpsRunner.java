@@ -124,9 +124,9 @@ class FlowQpsRunner {
                     + ", pass:" + oneSecondPass
                     + ", block:" + oneSecondBlock);
 
-                if (seconds-- <= 0) {
-                    stop = true;
-                }
+                //if (seconds-- <= 0) {
+                //    stop = true;
+                //}
             }
 
             long cost = System.currentTimeMillis() - start;
