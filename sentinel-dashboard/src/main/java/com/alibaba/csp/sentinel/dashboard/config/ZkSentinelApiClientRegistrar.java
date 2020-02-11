@@ -1,5 +1,6 @@
 package com.alibaba.csp.sentinel.dashboard.config;
 
+import com.alibaba.csp.sentinel.dashboard.rule.zookeeper.RuleZookeeperDuplexHandler;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -22,6 +23,11 @@ public class ZkSentinelApiClientRegistrar implements ImportBeanDefinitionRegistr
     BeanDefinition beanDefinition = BeanDefinitionBuilder
         .genericBeanDefinition(ZkSentinelApiClientPostProcessor.class).getBeanDefinition();
     registry.registerBeanDefinition(beanName, beanDefinition);
+
+    String handlerBeanName = Introspector.decapitalize(RuleZookeeperDuplexHandler.class.getSimpleName());
+    BeanDefinition handlerBeanDefinition = BeanDefinitionBuilder
+            .genericBeanDefinition(RuleZookeeperDuplexHandler.class).getBeanDefinition();
+    registry.registerBeanDefinition(handlerBeanName, handlerBeanDefinition);
   }
 
 }

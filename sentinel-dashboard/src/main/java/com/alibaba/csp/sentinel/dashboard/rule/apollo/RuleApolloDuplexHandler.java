@@ -29,7 +29,6 @@ import org.springframework.stereotype.Component;
 /**
  * @author tangzy
  */
-@Component("ruleApolloDuplex")
 public class RuleApolloDuplexHandler extends AbstractRuleApolloDuplexHandler {
 
     public RuleApolloDuplexHandler(ApolloConfig apolloConfig,

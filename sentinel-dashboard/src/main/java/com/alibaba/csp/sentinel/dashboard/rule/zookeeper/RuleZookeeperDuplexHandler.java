@@ -13,7 +13,6 @@ import java.util.List;
  * @author tomgs
  * @version 2020/2/11 1.0 
  */
-@Component("ruleZookeeperDuplex")
 public class RuleZookeeperDuplexHandler extends AbstractRuleZookeeperDuplexHandler {
     
     public RuleZookeeperDuplexHandler(CuratorFramework zkClient) {
