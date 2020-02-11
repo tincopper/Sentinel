@@ -19,15 +19,15 @@ public class ZkConfig {
     @Value("${zk.remote-address:127.0.0.1:2181}")
     private String remoteAddress;
 
-    @Value("${zk.app-id:/}")
-    private String appId;
+    @Value("${zk.root-path:/}")
+    private String rootPath;
 
     public String getRemoteAddress() {
         return remoteAddress;
     }
 
-    public String getAppId() {
-        return appId;
+    public String getRootPath() {
+        return rootPath;
     }
 
     @Bean(destroyMethod = "close")
