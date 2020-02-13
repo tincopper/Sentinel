@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
  * @author tomgs
  * @version 2020/2/11 1.0 
  */
-public class AbstractRuleZookeeperDuplexHandler implements DynamicRuleProvider<String>, DynamicRulePublisher<Object> {
+public abstract class AbstractRuleZookeeperDuplexHandler implements DynamicRuleProvider<String>, DynamicRulePublisher<Object> {
 
     private CuratorFramework zkClient;
 

@@ -3,7 +3,6 @@ package com.alibaba.csp.sentinel.dashboard.rule.zookeeper;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
 import com.alibaba.fastjson.JSON;
 import org.apache.curator.framework.CuratorFramework;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 

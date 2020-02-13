@@ -17,8 +17,7 @@ package com.alibaba.csp.sentinel.dashboard.config;
 
 import com.ctrip.framework.apollo.openapi.client.ApolloOpenApiClient;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.web.ConditionalOnEnabledResourceChain;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,8 +25,9 @@ import org.springframework.context.annotation.Configuration;
  * @author hantianwei@gmail.com
  * @since 1.5.0
  */
+@ConditionalOnProperty(value = "sentinel.datasource.type", havingValue = "apollo")
 @Configuration
-@ConditionalOnBean(annotation = EnableApolloPersistence.class)
+@EnableApolloPersistence
 public class ApolloConfig {
 
     @Value("${apollo.app.id}")
