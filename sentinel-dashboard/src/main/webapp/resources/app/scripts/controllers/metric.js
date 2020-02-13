@@ -201,6 +201,7 @@ app.controller('MetricCtl', ['$scope', '$stateParams', 'MetricService', '$interv
             var metrics = {};
             metrics.resource = identityName;
             // metrics.data = identityDatas;
+            identityDatas = parseStrTimeToInt(identityDatas);
             metrics.data = fillZeros(identityDatas);
             metrics.shortData = lastOfArray(identityDatas, 6);
             $scope.metrics.push(metrics);
@@ -213,15 +214,28 @@ app.controller('MetricCtl', ['$scope', '$stateParams', 'MetricService', '$interv
         }
       });
     };
+
+    function parseStrTimeToInt(metricData) {
+      if (!metricData || metricData.length === 0) {
+        return [];
+      }
+      for (var i = 0; i < metricData.length; i++) {
+        metricData[i].timestamp = parseInt(metricData[i].timestamp);
+        metricData[i].gmtCreate = parseInt(metricData[i].gmtCreate);
+        metricData[i].gmtCreate = parseInt(metricData[i].gmtCreate);
+      }
+      return metricData;
+    }
+
     function fillZeros(metricData) {
       if (!metricData || metricData.length == 0) {
         return [];
       }
       var filledData = [];
       filledData.push(metricData[0]);
-      var lastTime = metricData[0].timestamp / 1000;
+      var lastTime = parseInt(metricData[0].timestamp) / 1000;
       for (var i = 1; i < metricData.length; i++) {
-        var curTime = metricData[i].timestamp / 1000;
+        var curTime = parseInt(metricData[i].timestamp) / 1000;
         if (curTime > lastTime + 1) {
           for (var j = lastTime + 1; j < curTime; j++) {
             filledData.push({
