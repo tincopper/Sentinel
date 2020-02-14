@@ -1,16 +1,12 @@
-package com.alibaba.csp.sentinel.dashboard.client.extensions;
+package com.alibaba.csp.sentinel.dashboard.rule.zookeeper;
 
 import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
-import com.alibaba.csp.sentinel.dashboard.rule.zookeeper.RuleZookeeperDuplexHandler;
-import com.alibaba.csp.sentinel.dashboard.rule.zookeeper.ZkConfigUtil;
-import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /**
  * 扩展sentinelApiClient支持zk的方式更新规则数据
@@ -32,7 +28,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public List<FlowRuleEntity> fetchFlowRuleOfMachine(String app, String ip, int port) {
     List<FlowRuleEntity> flowRuleEntities;
     try {
-      flowRuleEntities = ruleZookeeperDuplexHandler.getFlowRules(app);
+      flowRuleEntities = ruleZookeeperDuplexHandler.getFlowRules(ZkConfigUtil.getFlowDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch flow rule from zk error: {}", e.getMessage(), e);
       flowRuleEntities = super.fetchFlowRuleOfMachine(app, ip, port);
@@ -44,7 +40,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public List<DegradeRuleEntity> fetchDegradeRuleOfMachine(String app, String ip, int port) {
     List<DegradeRuleEntity> degradeRuleEntities;
     try {
-      degradeRuleEntities = ruleZookeeperDuplexHandler.getDegradeRules(app);
+      degradeRuleEntities = ruleZookeeperDuplexHandler.getDegradeRules(ZkConfigUtil.getDegradeDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch degrade rule from zk error: {}", e.getMessage(), e);
       degradeRuleEntities = super.fetchDegradeRuleOfMachine(app, ip, port);
@@ -56,7 +52,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public List<SystemRuleEntity> fetchSystemRuleOfMachine(String app, String ip, int port) {
     List<SystemRuleEntity> systemRuleEntities;
     try {
-      systemRuleEntities = ruleZookeeperDuplexHandler.getSystemRules(app);
+      systemRuleEntities = ruleZookeeperDuplexHandler.getSystemRules(ZkConfigUtil.getSystemDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch system rule from zk error: {}", e.getMessage(), e);
       systemRuleEntities = super.fetchSystemRuleOfMachine(app, ip, port);
@@ -68,7 +64,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public List<AuthorityRuleEntity> fetchAuthorityRulesOfMachine(String app, String ip, int port) {
     List<AuthorityRuleEntity> authorityRuleEntities;
     try {
-      authorityRuleEntities = ruleZookeeperDuplexHandler.getAuthorityRules(app);
+      authorityRuleEntities = ruleZookeeperDuplexHandler.getAuthorityRules(ZkConfigUtil.getAuthorityDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch authority rule from zk error: {}", e.getMessage(), e);
       authorityRuleEntities = super.fetchAuthorityRulesOfMachine(app, ip, port);
@@ -80,7 +76,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public CompletableFuture<List<ParamFlowRuleEntity>> fetchParamFlowRulesOfMachine(String app, String ip, int port) {
     CompletableFuture<List<ParamFlowRuleEntity>> listCompletableFuture = new CompletableFuture<>();
     try {
-      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleZookeeperDuplexHandler.getParamFlowRules(app, ip, port);
+      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleZookeeperDuplexHandler.getParamFlowRules(ZkConfigUtil.getParamFlowDataId(app), app, ip, port);
       listCompletableFuture.complete(paramFlowRuleEntities);
     } catch (Exception e) {
       logger.warn("fetch param flow rule from zk error: {}", e.getMessage(), e);
@@ -94,7 +90,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
       List<FlowRuleEntity> rules) {
     CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     try {
-      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getFlowDataId(app), rules);
+      ruleZookeeperDuplexHandler.publishFlowRules(ZkConfigUtil.getFlowDataId(app), rules);
       completableFuture.complete(null);
     } catch (Exception e) {
       logger.error("publish flow rule to zk error: {}", e.getMessage(), e);
@@ -112,8 +108,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
       List<ParamFlowRuleEntity> rules) {
     CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     try {
-      List<ParamFlowRule> paramFlowRules = rules.stream().map(ParamFlowRuleEntity::getRule).collect(Collectors.toList());
-      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getParamFlowDataId(app), paramFlowRules);
+      ruleZookeeperDuplexHandler.publishParamFlowRules(ZkConfigUtil.getParamFlowDataId(app), rules);
       completableFuture.complete(null);
     } catch (Exception e) {
       logger.error("publish param flow rule to zk error: {}", e.getMessage(), e);
@@ -130,7 +125,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public boolean setDegradeRuleOfMachine(String app, String ip, int port,
       List<DegradeRuleEntity> rules) {
     try {
-      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getDegradeDataId(app), rules);
+      ruleZookeeperDuplexHandler.publishDegradeRules(ZkConfigUtil.getDegradeDataId(app), rules);
       return true;
     } catch (Exception e) {
       logger.warn("publish degrade rule from zk error: {}", e.getMessage(), e);
@@ -142,7 +137,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public boolean setSystemRuleOfMachine(String app, String ip, int port,
       List<SystemRuleEntity> rules) {
     try {
-      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getSystemDataId(app), rules);
+      ruleZookeeperDuplexHandler.publishSystemRules(ZkConfigUtil.getSystemDataId(app), rules);
       return true;
     } catch (Exception e) {
       logger.warn("publish system rule from zk error: {}", e.getMessage(), e);
@@ -154,7 +149,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public boolean setAuthorityRuleOfMachine(String app, String ip, int port,
       List<AuthorityRuleEntity> rules) {
     try {
-      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getAuthorityDataId(app), rules);
+      ruleZookeeperDuplexHandler.publishAuthorityRules(ZkConfigUtil.getAuthorityDataId(app), rules);
       return true;
     } catch (Exception e) {
       logger.warn("publish authority rule from zk error: {}", e.getMessage(), e);

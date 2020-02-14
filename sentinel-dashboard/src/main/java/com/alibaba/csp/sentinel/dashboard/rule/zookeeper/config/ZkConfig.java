@@ -1,4 +1,4 @@
-package com.alibaba.csp.sentinel.dashboard.config;
+package com.alibaba.csp.sentinel.dashboard.rule.zookeeper.config;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;

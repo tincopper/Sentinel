@@ -1,4 +1,4 @@
-package com.alibaba.csp.sentinel.dashboard.config;
+package com.alibaba.csp.sentinel.dashboard.rule.zookeeper.config;
 
 import com.alibaba.csp.sentinel.dashboard.rule.zookeeper.RuleZookeeperDuplexHandler;
 import org.springframework.beans.factory.config.BeanDefinition;

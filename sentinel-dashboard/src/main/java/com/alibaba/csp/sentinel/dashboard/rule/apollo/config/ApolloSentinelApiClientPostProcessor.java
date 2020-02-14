@@ -1,7 +1,8 @@
-package com.alibaba.csp.sentinel.dashboard.config;
+package com.alibaba.csp.sentinel.dashboard.rule.apollo.config;
 
+import com.alibaba.csp.sentinel.dashboard.rule.apollo.ApolloSentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
-import com.alibaba.csp.sentinel.dashboard.client.extensions.ZkSentinelApiClient;
+import java.beans.Introspector;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -11,14 +12,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.lang.Nullable;
 
-import java.beans.Introspector;
-
 /**
- * 用于将默认的SentinelApiClient进行替换为ZkApiClient的方式处理规则数据
+ * 用于将默认的SentinelApiClient进行替换为ApolloApiClient的方式处理规则数据
  *
  * @author zy_tang
  */
-public class ZkSentinelApiClientPostProcessor implements BeanPostProcessor, ApplicationContextAware {
+public class ApolloSentinelApiClientPostProcessor implements BeanPostProcessor, ApplicationContextAware {
 
   private ApplicationContext applicationContext;
 
@@ -30,9 +29,9 @@ public class ZkSentinelApiClientPostProcessor implements BeanPostProcessor, Appl
     if (targetBeanName.equals(beanName)) {
       beanFactory.removeBeanDefinition(targetBeanName);
       BeanDefinition beanDefinition = BeanDefinitionBuilder
-          .genericBeanDefinition(ZkSentinelApiClient.class).getBeanDefinition();
+          .genericBeanDefinition(ApolloSentinelApiClient.class).getBeanDefinition();
       beanFactory.registerBeanDefinition(targetBeanName, beanDefinition);
-      return beanFactory.createBean(ZkSentinelApiClient.class);
+      return beanFactory.createBean(ApolloSentinelApiClient.class);
     }
     return bean;
   }

@@ -1,20 +1,12 @@
-package com.alibaba.csp.sentinel.dashboard.client.extensions;
+package com.alibaba.csp.sentinel.dashboard.rule.apollo;
 
 import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.AuthorityRuleEntity;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.DegradeRuleEntity;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.FlowRuleEntity;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.ParamFlowRuleEntity;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.SystemRuleEntity;
-import com.alibaba.csp.sentinel.dashboard.rule.apollo.ApolloConfigUtil;
-import com.alibaba.csp.sentinel.dashboard.rule.apollo.RuleApolloDuplexHandler;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 扩展sentinelApiClient支持Apollo的方式更新规则数据
@@ -36,7 +28,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public List<FlowRuleEntity> fetchFlowRuleOfMachine(String app, String ip, int port) {
     List<FlowRuleEntity> flowRuleEntities;
     try {
-      flowRuleEntities = ruleApolloDuplexHandler.getFlowRules(app);
+      flowRuleEntities = ruleApolloDuplexHandler.getFlowRules(ApolloConfigUtil.getFlowDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch flow rule from apollo error: {}", e.getMessage(), e);
       flowRuleEntities = super.fetchFlowRuleOfMachine(app, ip, port);
@@ -48,7 +40,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public List<DegradeRuleEntity> fetchDegradeRuleOfMachine(String app, String ip, int port) {
     List<DegradeRuleEntity> degradeRuleEntities;
     try {
-      degradeRuleEntities = ruleApolloDuplexHandler.getDegradeRules(app);
+      degradeRuleEntities = ruleApolloDuplexHandler.getDegradeRules(ApolloConfigUtil.getFlowDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch degrade rule from apollo error: {}", e.getMessage(), e);
       degradeRuleEntities = super.fetchDegradeRuleOfMachine(app, ip, port);
@@ -60,7 +52,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public List<SystemRuleEntity> fetchSystemRuleOfMachine(String app, String ip, int port) {
     List<SystemRuleEntity> systemRuleEntities;
     try {
-      systemRuleEntities = ruleApolloDuplexHandler.getSystemRules(app);
+      systemRuleEntities = ruleApolloDuplexHandler.getSystemRules(ApolloConfigUtil.getFlowDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch system rule from apollo error: {}", e.getMessage(), e);
       systemRuleEntities = super.fetchSystemRuleOfMachine(app, ip, port);
@@ -72,7 +64,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public List<AuthorityRuleEntity> fetchAuthorityRulesOfMachine(String app, String ip, int port) {
     List<AuthorityRuleEntity> authorityRuleEntities;
     try {
-      authorityRuleEntities = ruleApolloDuplexHandler.getAuthorityRules(app);
+      authorityRuleEntities = ruleApolloDuplexHandler.getAuthorityRules(ApolloConfigUtil.getFlowDataId(app), app, ip, port);
     } catch (Exception e) {
       logger.warn("fetch authority rule from apollo error: {}", e.getMessage(), e);
       authorityRuleEntities = super.fetchAuthorityRulesOfMachine(app, ip, port);
@@ -84,7 +76,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public CompletableFuture<List<ParamFlowRuleEntity>> fetchParamFlowRulesOfMachine(String app, String ip, int port) {
     CompletableFuture<List<ParamFlowRuleEntity>> listCompletableFuture = new CompletableFuture<>();
     try {
-      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleApolloDuplexHandler.getParamFlowRules(app, ip, port);
+      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleApolloDuplexHandler.getParamFlowRules(ApolloConfigUtil.getFlowDataId(app), app, ip, port);
       listCompletableFuture.complete(paramFlowRuleEntities);
     } catch (Exception e) {
       logger.warn("fetch param flow rule from apollo error: {}", e.getMessage(), e);
@@ -98,7 +90,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
       List<FlowRuleEntity> rules) {
     CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     try {
-      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getFlowDataId(app), rules);
+      ruleApolloDuplexHandler.publishFlowRules(ApolloConfigUtil.getFlowDataId(app), rules);
       completableFuture.complete(null);
     } catch (Exception e) {
       logger.error("publish flow rule to apollo error: {}", e.getMessage(), e);
@@ -116,8 +108,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
       List<ParamFlowRuleEntity> rules) {
     CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     try {
-      List<ParamFlowRule> paramFlowRules = rules.stream().map(ParamFlowRuleEntity::getRule).collect(Collectors.toList());
-      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getParamFlowDataId(app), paramFlowRules);
+      ruleApolloDuplexHandler.publishParamFlowRules(ApolloConfigUtil.getParamFlowDataId(app), rules);
       completableFuture.complete(null);
     } catch (Exception e) {
       logger.error("publish param flow rule to apollo error: {}", e.getMessage(), e);
@@ -134,7 +125,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public boolean setDegradeRuleOfMachine(String app, String ip, int port,
       List<DegradeRuleEntity> rules) {
     try {
-      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getDegradeDataId(app), rules);
+      ruleApolloDuplexHandler.publishDegradeRules(ApolloConfigUtil.getDegradeDataId(app), rules);
       return true;
     } catch (Exception e) {
       logger.warn("publish degrade rule from apollo error: {}", e.getMessage(), e);
@@ -146,7 +137,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public boolean setSystemRuleOfMachine(String app, String ip, int port,
       List<SystemRuleEntity> rules) {
     try {
-      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getSystemDataId(app), rules);
+      ruleApolloDuplexHandler.publishSystemRules(ApolloConfigUtil.getSystemDataId(app), rules);
       return true;
     } catch (Exception e) {
       logger.warn("publish system rule from apollo error: {}", e.getMessage(), e);
@@ -158,7 +149,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public boolean setAuthorityRuleOfMachine(String app, String ip, int port,
       List<AuthorityRuleEntity> rules) {
     try {
-      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getAuthorityDataId(app), rules);
+      ruleApolloDuplexHandler.publishAuthorityRules(ApolloConfigUtil.getAuthorityDataId(app), rules);
       return true;
     } catch (Exception e) {
       logger.warn("publish authority rule from apollo error: {}", e.getMessage(), e);

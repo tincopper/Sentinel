@@ -1,4 +1,4 @@
-package com.alibaba.csp.sentinel.dashboard.config;
+package com.alibaba.csp.sentinel.dashboard.rule.apollo.config;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

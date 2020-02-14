@@ -15,50 +15,89 @@
  */
 package com.alibaba.csp.sentinel.dashboard.rule.apollo;
 
-import com.alibaba.csp.sentinel.dashboard.config.ApolloConfig;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
-import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
+import com.alibaba.csp.sentinel.dashboard.rule.AbstractRuleDuplexHandler;
+import com.alibaba.csp.sentinel.dashboard.rule.apollo.config.ApolloConfig;
+import com.alibaba.csp.sentinel.util.AssertUtil;
 import com.alibaba.fastjson.JSON;
 import com.ctrip.framework.apollo.openapi.client.ApolloOpenApiClient;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import com.ctrip.framework.apollo.openapi.client.exception.ApolloOpenApiException;
+import com.ctrip.framework.apollo.openapi.dto.NamespaceReleaseDTO;
+import com.ctrip.framework.apollo.openapi.dto.OpenItemDTO;
+import com.ctrip.framework.apollo.openapi.dto.OpenNamespaceDTO;
 
 /**
  * @author tangzy
  */
-public class RuleApolloDuplexHandler extends AbstractRuleApolloDuplexHandler {
+public class RuleApolloDuplexHandler extends AbstractRuleDuplexHandler {
 
-    public RuleApolloDuplexHandler(ApolloConfig apolloConfig,
-        ApolloOpenApiClient apolloOpenApiClient) {
-        super(apolloConfig, apolloOpenApiClient);
+    private ApolloConfig apolloConfig;
+    private ApolloOpenApiClient apolloOpenApiClient;
+
+    public RuleApolloDuplexHandler(final ApolloConfig apolloConfig,
+        final ApolloOpenApiClient apolloOpenApiClient) {
+        this.apolloConfig = apolloConfig;
+        this.apolloOpenApiClient = apolloOpenApiClient;
     }
 
-    public List<FlowRuleEntity> getFlowRules(String appName) throws Exception {
-        return super.getRules(ApolloConfigUtil.getFlowDataId(appName),
-            source -> JSON.parseArray(source, FlowRuleEntity.class));
+    @Override
+    public String getRules(String appName) throws Exception {
+        OpenNamespaceDTO openNamespaceDTO = apolloOpenApiClient.getNamespace(
+                apolloConfig.getAppId(), apolloConfig.getEnv(), apolloConfig.getClusterName(), apolloConfig.getNamespaceName());
+        return openNamespaceDTO
+                .getItems()
+                .stream()
+                .filter(p -> p.getKey().equals(appName))
+                .map(OpenItemDTO::getValue)
+                .findFirst()
+                .orElse("");
     }
 
-    public List<DegradeRuleEntity> getDegradeRules(String appName) throws Exception {
-        return super.getRules(ApolloConfigUtil.getDegradeDataId(appName),
-            source -> JSON.parseArray(source, DegradeRuleEntity.class));
+    @Override
+    public void publish(String app, Object rules) throws Exception {
+        AssertUtil.notEmpty(app, "app name cannot be empty");
+        if (rules == null) {
+            return;
+        }
+        // Increase the configuration
+        //String flowDataId = ApolloConfigUtil.getFlowDataId(app);
+        OpenItemDTO openItemDTO = new OpenItemDTO();
+        openItemDTO.setKey(app);
+        openItemDTO.setValue(JSON.toJSONString(rules));
+        openItemDTO.setComment("Program auto-join");
+        openItemDTO.setDataChangeCreatedBy("apollo");
+
+        //apolloOpenApiClient.createOrUpdateItem(appId, "DEV", "default", "application", openItemDTO);
+        createOrUpdateItem(apolloConfig.getAppId(), apolloConfig.getEnv(),
+                apolloConfig.getClusterName(), apolloConfig.getNamespaceName(), openItemDTO);
+
+        // Release configuration
+        NamespaceReleaseDTO namespaceReleaseDTO = new NamespaceReleaseDTO();
+        namespaceReleaseDTO.setEmergencyPublish(true);
+        namespaceReleaseDTO.setReleaseComment("Modify or add configurations");
+        namespaceReleaseDTO.setReleasedBy("apollo");
+        namespaceReleaseDTO.setReleaseTitle("Modify or add configurations");
+        apolloOpenApiClient.publishNamespace(apolloConfig.getAppId(), apolloConfig.getEnv(),
+                apolloConfig.getClusterName(), apolloConfig.getNamespaceName(), namespaceReleaseDTO);
     }
 
-    public List<AuthorityRuleEntity> getAuthorityRules(String appName) throws Exception {
-        return super.getRules(ApolloConfigUtil.getAuthorityDataId(appName),
-            source -> JSON.parseArray(source, AuthorityRuleEntity.class));
-    }
-
-    public List<ParamFlowRuleEntity> getParamFlowRules(String app, String ip, int port) throws Exception {
-        List<ParamFlowRule> rules = super.getRules(ApolloConfigUtil.getParamFlowDataId(app),
-                source -> JSON.parseArray(source, ParamFlowRule.class));
-        return rules.stream().map(e -> ParamFlowRuleEntity.fromAuthorityRule(app, ip, port, e))
-                .collect(Collectors.toList());
-    }
-
-    public List<SystemRuleEntity> getSystemRules(String appName) throws Exception {
-        return super.getRules(ApolloConfigUtil.getSystemDataId(appName),
-            source -> JSON.parseArray(source, SystemRuleEntity.class));
+    private void createOrUpdateItem(String appId, String env, String clusterName, String namespace, OpenItemDTO openItemDTO) {
+        // 兼容低版本
+        ApolloOpenApiException apolloOpenApiException = null;
+        try {
+            apolloOpenApiClient.createOrUpdateItem(appId, env, clusterName, namespace, openItemDTO);
+        } catch (Exception e) {
+            if (!(e.getCause() instanceof ApolloOpenApiException)) {
+                throw e;
+            }
+            apolloOpenApiException = (ApolloOpenApiException) e.getCause();
+        }
+        if (apolloOpenApiException == null) {
+            return;
+        }
+        if (404 != apolloOpenApiException.getStatus()) {
+            throw apolloOpenApiException;
+        }
+        apolloOpenApiClient.createItem(appId, env, clusterName, namespace, openItemDTO);
     }
 
 }
