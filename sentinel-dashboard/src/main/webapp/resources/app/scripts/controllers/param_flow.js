@@ -105,9 +105,10 @@ angular.module('sentinelDashboardApp').controller('ParamFlowController', ['$scop
       let mac = $scope.macInputModel.split(':');
       ParamFlowService.queryMachineRules($scope.app, mac[0], mac[1])
         .success(function (data) {
-          if (data.code === 0 && data.data) {
+          //if (data.code === 0 && data.data) {
+          if (data.code === 0) {
             $scope.loadError = undefined;
-            $scope.rules = data.data;
+            $scope.rules = data.data == null ? [] : data.data;
             $scope.rulesPageConfig.totalCount = $scope.rules.length;
           } else {
             $scope.rules = [];
@@ -133,6 +134,7 @@ angular.module('sentinelDashboardApp').controller('ParamFlowController', ['$scop
       if ($scope.currentRule.rule && $scope.currentRule.rule.durationInSec === undefined) {
         $scope.currentRule.rule.durationInSec = 1;
       }
+      $scope.currentRule.rule.durationInSec = parseInt($scope.currentRule.rule.durationInSec)
       $scope.paramFlowRuleDialog = {
         title: '编辑热点规则',
         type: 'edit',

@@ -10,6 +10,9 @@ import com.alibaba.csp.sentinel.dashboard.rule.apollo.ApolloConfigUtil;
 import com.alibaba.csp.sentinel.dashboard.rule.apollo.RuleApolloDuplexHandler;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +84,7 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
   public CompletableFuture<List<ParamFlowRuleEntity>> fetchParamFlowRulesOfMachine(String app, String ip, int port) {
     CompletableFuture<List<ParamFlowRuleEntity>> listCompletableFuture = new CompletableFuture<>();
     try {
-      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleApolloDuplexHandler.getParamFlowRules(app);
+      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleApolloDuplexHandler.getParamFlowRules(app, ip, port);
       listCompletableFuture.complete(paramFlowRuleEntities);
     } catch (Exception e) {
       logger.warn("fetch param flow rule from apollo error: {}", e.getMessage(), e);
@@ -113,7 +116,8 @@ public class ApolloSentinelApiClient extends SentinelApiClient {
       List<ParamFlowRuleEntity> rules) {
     CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     try {
-      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getParamFlowDataId(app), rules);
+      List<ParamFlowRule> paramFlowRules = rules.stream().map(ParamFlowRuleEntity::getRule).collect(Collectors.toList());
+      ruleApolloDuplexHandler.publish(ApolloConfigUtil.getParamFlowDataId(app), paramFlowRules);
       completableFuture.complete(null);
     } catch (Exception e) {
       logger.error("publish param flow rule to apollo error: {}", e.getMessage(), e);

@@ -1,10 +1,12 @@
 package com.alibaba.csp.sentinel.dashboard.rule.zookeeper;
 
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
+import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
 import com.alibaba.fastjson.JSON;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *  
@@ -33,9 +35,11 @@ public class RuleZookeeperDuplexHandler extends AbstractRuleZookeeperDuplexHandl
                 source -> JSON.parseArray(source, AuthorityRuleEntity.class));
     }
 
-    public List<ParamFlowRuleEntity> getParamFlowRules(String appName) throws Exception {
-        return super.getRules(ZkConfigUtil.getParamFlowDataId(appName),
-                source -> JSON.parseArray(source, ParamFlowRuleEntity.class));
+    public List<ParamFlowRuleEntity> getParamFlowRules(String appName, String ip, int port) throws Exception {
+        List<ParamFlowRule> rules = super.getRules(ZkConfigUtil.getParamFlowDataId(appName),
+                source -> JSON.parseArray(source, ParamFlowRule.class));
+        return rules.stream().map(e -> ParamFlowRuleEntity.fromAuthorityRule(appName, ip, port, e))
+                .collect(Collectors.toList());
     }
 
     public List<SystemRuleEntity> getSystemRules(String appName) throws Exception {

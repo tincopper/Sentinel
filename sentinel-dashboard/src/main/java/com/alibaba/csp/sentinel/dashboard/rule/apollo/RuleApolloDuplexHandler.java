@@ -17,10 +17,12 @@ package com.alibaba.csp.sentinel.dashboard.rule.apollo;
 
 import com.alibaba.csp.sentinel.dashboard.config.ApolloConfig;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
+import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
 import com.alibaba.fastjson.JSON;
 import com.ctrip.framework.apollo.openapi.client.ApolloOpenApiClient;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author tangzy
@@ -47,9 +49,11 @@ public class RuleApolloDuplexHandler extends AbstractRuleApolloDuplexHandler {
             source -> JSON.parseArray(source, AuthorityRuleEntity.class));
     }
 
-    public List<ParamFlowRuleEntity> getParamFlowRules(String appName) throws Exception {
-        return super.getRules(ApolloConfigUtil.getParamFlowDataId(appName),
-            source -> JSON.parseArray(source, ParamFlowRuleEntity.class));
+    public List<ParamFlowRuleEntity> getParamFlowRules(String app, String ip, int port) throws Exception {
+        List<ParamFlowRule> rules = super.getRules(ApolloConfigUtil.getParamFlowDataId(app),
+                source -> JSON.parseArray(source, ParamFlowRule.class));
+        return rules.stream().map(e -> ParamFlowRuleEntity.fromAuthorityRule(app, ip, port, e))
+                .collect(Collectors.toList());
     }
 
     public List<SystemRuleEntity> getSystemRules(String appName) throws Exception {

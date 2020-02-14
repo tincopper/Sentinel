@@ -4,11 +4,13 @@ import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
 import com.alibaba.csp.sentinel.dashboard.rule.zookeeper.RuleZookeeperDuplexHandler;
 import com.alibaba.csp.sentinel.dashboard.rule.zookeeper.ZkConfigUtil;
+import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * 扩展sentinelApiClient支持zk的方式更新规则数据
@@ -78,7 +80,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
   public CompletableFuture<List<ParamFlowRuleEntity>> fetchParamFlowRulesOfMachine(String app, String ip, int port) {
     CompletableFuture<List<ParamFlowRuleEntity>> listCompletableFuture = new CompletableFuture<>();
     try {
-      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleZookeeperDuplexHandler.getParamFlowRules(app);
+      List<ParamFlowRuleEntity> paramFlowRuleEntities = ruleZookeeperDuplexHandler.getParamFlowRules(app, ip, port);
       listCompletableFuture.complete(paramFlowRuleEntities);
     } catch (Exception e) {
       logger.warn("fetch param flow rule from zk error: {}", e.getMessage(), e);
@@ -110,7 +112,8 @@ public class ZkSentinelApiClient extends SentinelApiClient {
       List<ParamFlowRuleEntity> rules) {
     CompletableFuture<Void> completableFuture = new CompletableFuture<>();
     try {
-      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getParamFlowDataId(app), rules);
+      List<ParamFlowRule> paramFlowRules = rules.stream().map(ParamFlowRuleEntity::getRule).collect(Collectors.toList());
+      ruleZookeeperDuplexHandler.publish(ZkConfigUtil.getParamFlowDataId(app), paramFlowRules);
       completableFuture.complete(null);
     } catch (Exception e) {
       logger.error("publish param flow rule to zk error: {}", e.getMessage(), e);
