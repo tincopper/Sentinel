@@ -30,15 +30,30 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
     }
 
     public List<FlowRuleEntity> getFlowRules(String dataId, String app, String ip, int port) throws Exception {
-        return getRules(dataId, source -> JSON.parseArray(source, FlowRuleEntity.class));
+        List<FlowRule> rules = getRules(dataId, source -> JSON.parseArray(source, FlowRule.class));
+        if (rules != null) {
+            return rules.stream().map(rule -> FlowRuleEntity.fromFlowRule(app, ip, port, rule))
+                    .collect(Collectors.toList());
+        }
+        return null;
     }
 
     public List<DegradeRuleEntity> getDegradeRules(String dataId, String app, String ip, int port) throws Exception {
-        return getRules(dataId, source -> JSON.parseArray(source, DegradeRuleEntity.class));
+        List<DegradeRule> rules = getRules(dataId, source -> JSON.parseArray(source, DegradeRule.class));
+        if (rules != null) {
+            return rules.stream().map(e -> DegradeRuleEntity.fromDegradeRule(app, ip, port, e))
+                    .collect(Collectors.toList());
+        }
+        return null;
     }
 
     public List<AuthorityRuleEntity> getAuthorityRules(String dataId, String app, String ip, int port) throws Exception {
-        return getRules(dataId, source -> JSON.parseArray(source, AuthorityRuleEntity.class));
+        List<AuthorityRule> rules = getRules(dataId, source -> JSON.parseArray(source, AuthorityRule.class));
+        if (rules != null) {
+            return rules.stream().map(e -> AuthorityRuleEntity.fromAuthorityRule(app, ip, port, e))
+                    .collect(Collectors.toList());
+        }
+        return null;
     }
 
     public List<ParamFlowRuleEntity> getParamFlowRules(String dataId, String app, String ip, int port) throws Exception {
