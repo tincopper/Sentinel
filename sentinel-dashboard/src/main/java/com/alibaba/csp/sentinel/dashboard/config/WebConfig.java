@@ -20,7 +20,6 @@ import com.alibaba.csp.sentinel.adapter.servlet.callback.WebCallbackManager;
 import com.alibaba.csp.sentinel.dashboard.auth.AuthorizationInterceptor;
 import com.alibaba.csp.sentinel.dashboard.auth.LoginAuthenticationFilter;
 import com.alibaba.csp.sentinel.util.StringUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import org.slf4j.Logger;
@@ -77,16 +76,13 @@ public class WebConfig implements WebMvcConfigurer {
         /* 序列换成json时,将所有的long变成string
          * 因为js中得数字类型不能包含所有的java long值
          */
-        ObjectMapper objectMapper = new ObjectMapper();
         SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
         simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
-        objectMapper.registerModule(simpleModule);
-
         for (HttpMessageConverter<?> httpMessageConverter : converters) {
             if (httpMessageConverter instanceof MappingJackson2HttpMessageConverter) {
                 MappingJackson2HttpMessageConverter converter = (MappingJackson2HttpMessageConverter) httpMessageConverter;
-                converter.setObjectMapper(objectMapper);
+                converter.getObjectMapper().registerModules(simpleModule);
             }
         }
     }
