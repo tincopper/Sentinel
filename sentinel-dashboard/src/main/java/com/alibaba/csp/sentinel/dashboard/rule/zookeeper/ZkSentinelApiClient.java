@@ -158,4 +158,16 @@ public class ZkSentinelApiClient extends SentinelApiClient {
 
   }
 
+  //setFlowRuleOfMachine
+  @Override
+  public boolean setFlowRuleOfMachine(String app, String ip, int port, List<FlowRuleEntity> rules) {
+    try {
+      ruleZookeeperDuplexHandler.publishFlowRules(ZkConfigUtil.getFlowDataId(app), rules);
+      return true;
+    } catch (Exception e) {
+      logger.error("publish flow rule to zk error: {}", e.getMessage(), e);
+      return super.setFlowRuleOfMachine(app, ip, port, rules);
+    }
+  }
+
 }
