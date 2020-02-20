@@ -627,7 +627,7 @@ public class SentinelApiClient {
         }
     }
 
-    public CompletableFuture<Void> modifyClusterMode(String ip, int port, int mode) {
+    public CompletableFuture<Void> modifyClusterMode(String app, String ip, int port, int mode) {
         if (StringUtil.isBlank(ip) || port <= 0) {
             return AsyncUtils.newFailedFuture(new IllegalArgumentException("Invalid parameter"));
         }

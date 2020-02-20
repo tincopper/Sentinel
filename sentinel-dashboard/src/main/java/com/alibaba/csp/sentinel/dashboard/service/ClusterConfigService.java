@@ -61,7 +61,7 @@ public class ClusterConfigService {
         String ip = request.getIp();
         int port = request.getPort();
         return sentinelApiClient.modifyClusterClientConfig(app, ip, port, request.getClientConfig())
-            .thenCompose(v -> sentinelApiClient.modifyClusterMode(ip, port, ClusterStateManager.CLUSTER_CLIENT));
+            .thenCompose(v -> sentinelApiClient.modifyClusterMode(app, ip, port, ClusterStateManager.CLUSTER_CLIENT));
     }
 
     private boolean notClientRequestValid(/*@NonNull */ ClusterClientModifyRequest request) {
@@ -90,7 +90,7 @@ public class ClusterConfigService {
         return sentinelApiClient.modifyClusterServerNamespaceSet(app, ip, port, namespaceSet)
             .thenCompose(v -> sentinelApiClient.modifyClusterServerTransportConfig(app, ip, port, transportConfig))
             .thenCompose(v -> sentinelApiClient.modifyClusterServerFlowConfig(app, ip, port, flowConfig))
-            .thenCompose(v -> sentinelApiClient.modifyClusterMode(ip, port, ClusterStateManager.CLUSTER_SERVER));
+            .thenCompose(v -> sentinelApiClient.modifyClusterMode(app, ip, port, ClusterStateManager.CLUSTER_SERVER));
     }
 
     /**
