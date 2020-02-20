@@ -4,6 +4,7 @@ import com.alibaba.csp.sentinel.cluster.ClusterStateManager;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
 import com.alibaba.csp.sentinel.dashboard.domain.cluster.ClusterGroupEntity;
 import com.alibaba.csp.sentinel.dashboard.domain.cluster.config.ClusterClientConfig;
+import com.alibaba.csp.sentinel.dashboard.domain.cluster.config.ServerFlowConfig;
 import com.alibaba.csp.sentinel.dashboard.domain.cluster.config.ServerTransportConfig;
 import com.alibaba.csp.sentinel.datasource.Converter;
 import com.alibaba.csp.sentinel.slots.block.authority.AuthorityRule;
@@ -110,11 +111,11 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
         publish(dataId, config);
     }
 
-    public void publishClusterServerTransportConfig(String dataId, String ip, int port, ServerTransportConfig config) throws Exception {
+    public void publishClusterServerTransportConfig(String serverTransportConfigDataId, String clusterClientConfigDataId, String ip, int port, ServerTransportConfig config) throws Exception {
         List<ClusterGroupEntity> groupList = new ArrayList<>();
         AtomicBoolean exist = new AtomicBoolean(false);
         try {
-            groupList = getRules(dataId, source -> JSON.parseArray(source, ClusterGroupEntity.class));
+            groupList = getRules(serverTransportConfigDataId, source -> JSON.parseArray(source, ClusterGroupEntity.class));
             if (!CollectionUtils.isEmpty(groupList)) {
                 groupList.forEach(group -> {
                     if (parseMachineId(ip, port).equals(group.getMachineId())) {
@@ -133,7 +134,8 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
         if (CollectionUtils.isEmpty(groupList) || !exist.get()) {
             groupList.add(new ClusterGroupEntity().setIp(ip).setPort(config.getPort()).setMachineId(parseMachineId(ip, port)).setBelongToApp(true));
         }
-        publish(dataId, groupList);
+        publish(serverTransportConfigDataId, groupList);
+        publishClusterClientConfig(clusterClientConfigDataId, new ClusterClientConfig().setServerHost(ip).setServerPort(config.getPort()).setRequestTimeout(20));
     }
 
     public void publishClusterMode(String clusterMapConfigDataId, String clusterClientConfigDataId, String ip, int port, int mode) throws Exception {
@@ -147,25 +149,6 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
             }
         }
         switch (mode) {
-            case ClusterStateManager.CLUSTER_CLIENT:
-                // get server token machine id, ignore the NPE
-                ClusterClientConfig clientConfig = getRules(clusterClientConfigDataId, source -> JSON.parseObject(source, ClusterClientConfig.class));
-                String serverId = parseMachineId(clientConfig.getServerHost(), clientConfig.getServerPort());
-                if (!CollectionUtils.isEmpty(groupList)) {
-                    Optional<ClusterGroupEntity> clusterGroupEntityOptional = groupList.stream()
-                            .filter(group -> serverId.equals(group.getMachineId()))
-                            .findFirst();
-                    if (clusterGroupEntityOptional.isPresent()) {
-                        clusterGroupEntityOptional.get().getClientSet().add(machineId);
-                    } else {
-                        groupList.add(newClusterGroupEntity(machineId, clientConfig));
-                    }
-                }
-                if (groupList == null) {
-                    groupList = new ArrayList<>();
-                }
-                groupList.add(newClusterGroupEntity(machineId, clientConfig));
-                break;
             case ClusterStateManager.CLUSTER_SERVER:
                 if (!CollectionUtils.isEmpty(groupList)) {
                     if (groupList.stream().anyMatch(group -> machineId.equals(group.getMachineId()))) {
@@ -177,18 +160,34 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
                 }
                 groupList.add(new ClusterGroupEntity().setMachineId(machineId).setIp(ip));
                 break;
+            case ClusterStateManager.CLUSTER_CLIENT:
+                // get server token machine id, ignore the NPE
+                ClusterClientConfig clientConfig = getRules(clusterClientConfigDataId, source -> JSON.parseObject(source, ClusterClientConfig.class));
+                if (CollectionUtils.isEmpty(groupList)) {
+                    throw new UnsupportedOperationException("setting cluster server mode must before cluster client mode");
+                }
+                Optional<ClusterGroupEntity> clusterGroupEntity = groupList.stream().filter(group -> clientConfig.getServerHost().equals(group.getIp())
+                        && clientConfig.getServerPort().equals(group.getPort())).findFirst();
+                if (!clusterGroupEntity.isPresent()) {
+                    throw new UnsupportedOperationException("not found server token machine id");
+                }
+                clusterGroupEntity.get().getClientSet().add(machineId);
+                break;
             default:
-                throw new IllegalArgumentException("argument 'mode' value is invalid.");
+                throw new IllegalArgumentException("argument 'mode' value " + mode + " is invalid.");
         }
 
         publish(clusterMapConfigDataId, groupList);
     }
 
-    private ClusterGroupEntity newClusterGroupEntity(String machineId, ClusterClientConfig clientConfig) {
-        String serverId = parseMachineId(clientConfig.getServerHost(), clientConfig.getServerPort());
-        HashSet<String> clientSet = new HashSet<>();
-        clientSet.add(machineId);
-        return new ClusterGroupEntity().setMachineId(serverId).setIp(clientConfig.getServerHost()).setClientSet(clientSet);
+    public void publishClusterServerFlowConfig(String clusterMapConfigDataId, String ip, int port, ServerFlowConfig config) throws Exception {
+        List<ClusterGroupEntity> groupList = getRules(clusterMapConfigDataId, source -> JSON.parseArray(source, ClusterGroupEntity.class));
+        String machineId = parseMachineId(ip, port);
+        groupList.stream()
+                .filter(group -> machineId.equals(group.getMachineId()))
+                .findFirst()
+                .ifPresent(group -> group.setMaxAllowedQps(config.getMaxAllowedQps()));
+        publish(clusterMapConfigDataId, groupList);
     }
 
     private String parseMachineId(String ip, int port) {

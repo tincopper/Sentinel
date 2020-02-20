@@ -90,8 +90,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
     }
 
     @Override
-    public CompletableFuture<Void> setFlowRuleOfMachineAsync(String app, String ip, int port,
-                                                             List<FlowRuleEntity> rules) {
+    public CompletableFuture<Void> setFlowRuleOfMachineAsync(String app, String ip, int port, List<FlowRuleEntity> rules) {
         CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         try {
             ruleZookeeperDuplexHandler.publishFlowRules(ZkConfigUtil.getFlowDataId(app), rules);
@@ -108,8 +107,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
     }
 
     @Override
-    public CompletableFuture<Void> setParamFlowRuleOfMachine(String app, String ip, int port,
-                                                             List<ParamFlowRuleEntity> rules) {
+    public CompletableFuture<Void> setParamFlowRuleOfMachine(String app, String ip, int port, List<ParamFlowRuleEntity> rules) {
         CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         try {
             ruleZookeeperDuplexHandler.publishParamFlowRules(ZkConfigUtil.getParamFlowDataId(app), rules);
@@ -126,8 +124,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
     }
 
     @Override
-    public boolean setDegradeRuleOfMachine(String app, String ip, int port,
-                                           List<DegradeRuleEntity> rules) {
+    public boolean setDegradeRuleOfMachine(String app, String ip, int port, List<DegradeRuleEntity> rules) {
         try {
             ruleZookeeperDuplexHandler.publishDegradeRules(ZkConfigUtil.getDegradeDataId(app), rules);
             return true;
@@ -138,8 +135,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
     }
 
     @Override
-    public boolean setSystemRuleOfMachine(String app, String ip, int port,
-                                          List<SystemRuleEntity> rules) {
+    public boolean setSystemRuleOfMachine(String app, String ip, int port, List<SystemRuleEntity> rules) {
         try {
             ruleZookeeperDuplexHandler.publishSystemRules(ZkConfigUtil.getSystemDataId(app), rules);
             return true;
@@ -150,8 +146,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
     }
 
     @Override
-    public boolean setAuthorityRuleOfMachine(String app, String ip, int port,
-                                             List<AuthorityRuleEntity> rules) {
+    public boolean setAuthorityRuleOfMachine(String app, String ip, int port, List<AuthorityRuleEntity> rules) {
         try {
             ruleZookeeperDuplexHandler.publishAuthorityRules(ZkConfigUtil.getAuthorityDataId(app), rules);
             return true;
@@ -180,7 +175,7 @@ public class ZkSentinelApiClient extends SentinelApiClient {
         logger.info("modifyClusterServerTransportConfig##app:{}, ip:{}, port:{}, config:{}", app, ip, port, config);
         CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         try {
-            ruleZookeeperDuplexHandler.publishClusterServerTransportConfig(ZkConfigUtil.getClusterMapConfig(app), ip, port, config);
+            ruleZookeeperDuplexHandler.publishClusterServerTransportConfig(ZkConfigUtil.getClusterMapConfig(app), ZkConfigUtil.getClusterClientConfig(app), ip, port, config);
             completableFuture.complete(null);
         } catch (Exception e) {
             logger.error("publish cluster server transport config to zk error: {}", e.getMessage(), e);
@@ -195,7 +190,19 @@ public class ZkSentinelApiClient extends SentinelApiClient {
 
     @Override
     public CompletableFuture<Void> modifyClusterServerFlowConfig(String app, String ip, int port, ServerFlowConfig config) {
-        return super.modifyClusterServerFlowConfig(app, ip, port, config);
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        try {
+            ruleZookeeperDuplexHandler.publishClusterServerFlowConfig(ZkConfigUtil.getClusterMapConfig(app), ip, port, config);
+            completableFuture.complete(null);
+        } catch (Exception e) {
+            logger.error("publish cluster client config to zk error: {}", e.getMessage(), e);
+            completableFuture.completeExceptionally(e);
+        }
+        // 如果zk出现问题可以走内存的方式去修改规则数据
+        if (completableFuture.isCompletedExceptionally()) {
+            return super.modifyClusterServerFlowConfig(app, ip, port, config);
+        }
+        return completableFuture;
     }
 
     @Override
@@ -224,20 +231,20 @@ public class ZkSentinelApiClient extends SentinelApiClient {
 
     @Override
     public CompletableFuture<Void> modifyClusterMode(String app, String ip, int port, int mode) {
-      CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-      try {
-        ruleZookeeperDuplexHandler.publishClusterMode(ZkConfigUtil.getClusterMapConfig(app),
-                ZkConfigUtil.getClusterClientConfig(app), ip, port, mode);
-        completableFuture.complete(null);
-      } catch (Exception e) {
-        logger.error("publish cluster client config to zk error: {}", e.getMessage(), e);
-        completableFuture.completeExceptionally(e);
-      }
-      // 如果zk出现问题可以走内存的方式去修改规则数据
-      if (completableFuture.isCompletedExceptionally()) {
-        return super.modifyClusterMode(app, ip, port, mode);
-      }
-      return completableFuture;
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        try {
+            ruleZookeeperDuplexHandler.publishClusterMode(ZkConfigUtil.getClusterMapConfig(app),
+                    ZkConfigUtil.getClusterClientConfig(app), ip, port, mode);
+            completableFuture.complete(null);
+        } catch (Exception e) {
+            logger.error("publish cluster client config to zk error: {}", e.getMessage(), e);
+            completableFuture.completeExceptionally(e);
+        }
+        // 如果zk出现问题可以走内存的方式去修改规则数据
+        if (completableFuture.isCompletedExceptionally()) {
+            return super.modifyClusterMode(app, ip, port, mode);
+        }
+        return completableFuture;
     }
 
 }

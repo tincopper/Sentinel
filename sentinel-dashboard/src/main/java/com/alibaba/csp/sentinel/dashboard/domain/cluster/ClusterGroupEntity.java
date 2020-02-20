@@ -28,6 +28,7 @@ public class ClusterGroupEntity {
 
     private String ip;
     private Integer port;
+    private Double maxAllowedQps;
 
     private Set<String> clientSet = new HashSet<>();
 
@@ -78,14 +79,24 @@ public class ClusterGroupEntity {
         return this;
     }
 
+    public Double getMaxAllowedQps() {
+        return maxAllowedQps;
+    }
+
+    public ClusterGroupEntity setMaxAllowedQps(Double maxAllowedQps) {
+        this.maxAllowedQps = maxAllowedQps;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ClusterGroupEntity{" +
-            "machineId='" + machineId + '\'' +
-            ", ip='" + ip + '\'' +
-            ", port=" + port +
-            ", clientSet=" + clientSet +
-            ", belongToApp=" + belongToApp +
-            '}';
+                "machineId='" + machineId + '\'' +
+                ", ip='" + ip + '\'' +
+                ", port=" + port +
+                ", maxAllowedQps=" + maxAllowedQps +
+                ", clientSet=" + clientSet +
+                ", belongToApp=" + belongToApp +
+                '}';
     }
 }
