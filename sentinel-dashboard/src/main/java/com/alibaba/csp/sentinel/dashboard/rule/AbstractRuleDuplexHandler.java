@@ -111,7 +111,7 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
         publish(dataId, config);
     }
 
-    public void publishClusterServerTransportConfig(String serverTransportConfigDataId, String clusterClientConfigDataId, String ip, int port, ServerTransportConfig config) throws Exception {
+    public void publishClusterServerTransportConfig(String serverTransportConfigDataId, String clusterClientConfigDataId, String ip, int port, ServerTransportConfig config, boolean isBelongToApp) throws Exception {
         List<ClusterGroupEntity> groupList = new ArrayList<>();
         AtomicBoolean exist = new AtomicBoolean(false);
         try {
@@ -120,8 +120,7 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
                 groupList.forEach(group -> {
                     if (parseMachineId(ip, port).equals(group.getMachineId())) {
                         group.setPort(config.getPort());
-                        // 因为只有true才会进入到这里来
-                        group.setBelongToApp(true);
+                        group.setBelongToApp(isBelongToApp);
                         exist.set(true);
                     }
                 });
@@ -162,16 +161,16 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
                 break;
             case ClusterStateManager.CLUSTER_CLIENT:
                 // get server token machine id, ignore the NPE
-                ClusterClientConfig clientConfig = getRules(clusterClientConfigDataId, source -> JSON.parseObject(source, ClusterClientConfig.class));
-                if (CollectionUtils.isEmpty(groupList)) {
-                    throw new UnsupportedOperationException("setting cluster server mode must before cluster client mode");
+                ClusterGroupEntity clusterGroupEntity = getClusterGroupEntity(clusterClientConfigDataId, groupList);
+                clusterGroupEntity.getClientSet().add(machineId);
+                break;
+            case ClusterStateManager.CLUSTER_NOT_STARTED:
+                // 从client set中剔除对应的ip
+                clusterGroupEntity = getClusterGroupEntity(clusterClientConfigDataId, groupList);
+                clusterGroupEntity.getClientSet().remove(machineId);
+                if (machineId.equals(clusterGroupEntity.getMachineId())) {
+                    groupList.remove(clusterGroupEntity);
                 }
-                Optional<ClusterGroupEntity> clusterGroupEntity = groupList.stream().filter(group -> clientConfig.getServerHost().equals(group.getIp())
-                        && clientConfig.getServerPort().equals(group.getPort())).findFirst();
-                if (!clusterGroupEntity.isPresent()) {
-                    throw new UnsupportedOperationException("not found server token machine id");
-                }
-                clusterGroupEntity.get().getClientSet().add(machineId);
                 break;
             default:
                 throw new IllegalArgumentException("argument 'mode' value " + mode + " is invalid.");
@@ -192,6 +191,23 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
 
     private String parseMachineId(String ip, int port) {
         return ip + "@" + port;
+    }
+
+    private ClusterGroupEntity getClusterGroupEntity(String clusterClientConfigDataId, List<ClusterGroupEntity> groupList) throws Exception {
+        ClusterClientConfig clientConfig = getRules(clusterClientConfigDataId, source -> JSON.parseObject(source, ClusterClientConfig.class));
+        if (CollectionUtils.isEmpty(groupList)) {
+            throw new UnsupportedOperationException("setting cluster server mode must before cluster client mode");
+        }
+        Optional<ClusterGroupEntity> clusterGroupEntity = groupList.stream().filter(group -> clientConfig.getServerHost().equals(group.getIp())
+                && clientConfig.getServerPort().equals(group.getPort())).findFirst();
+        if (!clusterGroupEntity.isPresent()) {
+            throw new UnsupportedOperationException("not found server token machine id");
+        }
+        return clusterGroupEntity.get();
+    }
+
+    public void publishClusterServerNamespaceSet(String clusterNameSpaceDataId, Set<String> set) throws Exception {
+        publish(clusterNameSpaceDataId, set);
     }
 
 }

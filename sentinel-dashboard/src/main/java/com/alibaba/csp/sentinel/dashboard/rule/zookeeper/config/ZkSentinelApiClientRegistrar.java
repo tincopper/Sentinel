@@ -28,6 +28,11 @@ public class ZkSentinelApiClientRegistrar implements ImportBeanDefinitionRegistr
     BeanDefinition handlerBeanDefinition = BeanDefinitionBuilder
             .genericBeanDefinition(RuleZookeeperDuplexHandler.class).getBeanDefinition();
     registry.registerBeanDefinition(handlerBeanName, handlerBeanDefinition);
+
+    String zkClusterServiceBeanName = Introspector.decapitalize(ZkClusterAssignServicePostProcessor.class.getSimpleName());
+    BeanDefinition zkClusterServiceBeanDefinition = BeanDefinitionBuilder
+            .genericBeanDefinition(ZkClusterAssignServicePostProcessor.class).getBeanDefinition();
+    registry.registerBeanDefinition(zkClusterServiceBeanName, zkClusterServiceBeanDefinition);
   }
 
 }

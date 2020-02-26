@@ -1,7 +1,11 @@
 package com.alibaba.csp.sentinel.dashboard.rule.zookeeper;
 
+import com.alibaba.csp.sentinel.cluster.ClusterStateManager;
 import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.*;
+import com.alibaba.csp.sentinel.dashboard.discovery.AppInfo;
+import com.alibaba.csp.sentinel.dashboard.discovery.AppManagement;
+import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
 import com.alibaba.csp.sentinel.dashboard.domain.cluster.config.ClusterClientConfig;
 import com.alibaba.csp.sentinel.dashboard.domain.cluster.config.ServerFlowConfig;
 import com.alibaba.csp.sentinel.dashboard.domain.cluster.config.ServerTransportConfig;
@@ -9,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -22,10 +27,12 @@ public class ZkSentinelApiClient extends SentinelApiClient {
     private static Logger logger = LoggerFactory.getLogger(ZkSentinelApiClient.class);
 
     private RuleZookeeperDuplexHandler ruleZookeeperDuplexHandler;
+    private AppManagement appManagement;
 
-    public ZkSentinelApiClient(final RuleZookeeperDuplexHandler ruleZookeeperDuplexHandler) {
+    public ZkSentinelApiClient(final RuleZookeeperDuplexHandler ruleZookeeperDuplexHandler, final AppManagement appManagement) {
         super();
         this.ruleZookeeperDuplexHandler = ruleZookeeperDuplexHandler;
+        this.appManagement = appManagement;
     }
 
     @Override
@@ -175,7 +182,8 @@ public class ZkSentinelApiClient extends SentinelApiClient {
         logger.info("modifyClusterServerTransportConfig##app:{}, ip:{}, port:{}, config:{}", app, ip, port, config);
         CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         try {
-            ruleZookeeperDuplexHandler.publishClusterServerTransportConfig(ZkConfigUtil.getClusterMapConfig(app), ZkConfigUtil.getClusterClientConfig(app), ip, port, config);
+            Optional<MachineInfo> machine = appManagement.getDetailApp(app).getMachine(ip, port);
+            ruleZookeeperDuplexHandler.publishClusterServerTransportConfig(ZkConfigUtil.getClusterMapConfig(app), ZkConfigUtil.getClusterClientConfig(app), ip, port, config, machine.isPresent());
             completableFuture.complete(null);
         } catch (Exception e) {
             logger.error("publish cluster server transport config to zk error: {}", e.getMessage(), e);
@@ -207,7 +215,20 @@ public class ZkSentinelApiClient extends SentinelApiClient {
 
     @Override
     public CompletableFuture<Void> modifyClusterServerNamespaceSet(String app, String ip, int port, Set<String> set) {
-        return super.modifyClusterServerNamespaceSet(app, ip, port, set);
+        logger.info("modifyClusterServerNamespaceSet##app:{}, ip:{}, port:{}, namespace:{}", app, ip, port, set);
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        try {
+            ruleZookeeperDuplexHandler.publishClusterServerNamespaceSet(ZkConfigUtil.getClusterNameSpaceDataId(app), set);
+            completableFuture.complete(null);
+        } catch (Exception e) {
+            logger.error("publish cluster client config to zk error: {}", e.getMessage(), e);
+            completableFuture.completeExceptionally(e);
+        }
+        // 如果zk出现问题可以走内存的方式去修改规则数据
+        if (completableFuture.isCompletedExceptionally()) {
+            return super.modifyClusterServerNamespaceSet(app, ip, port, set);
+        }
+        return completableFuture;
     }
 
     @Override
@@ -235,6 +256,9 @@ public class ZkSentinelApiClient extends SentinelApiClient {
         try {
             ruleZookeeperDuplexHandler.publishClusterMode(ZkConfigUtil.getClusterMapConfig(app),
                     ZkConfigUtil.getClusterClientConfig(app), ip, port, mode);
+            if (ClusterStateManager.CLUSTER_NOT_STARTED == mode) {
+                super.modifyClusterMode(app, ip, port, mode);
+            }
             completableFuture.complete(null);
         } catch (Exception e) {
             logger.error("publish cluster client config to zk error: {}", e.getMessage(), e);
