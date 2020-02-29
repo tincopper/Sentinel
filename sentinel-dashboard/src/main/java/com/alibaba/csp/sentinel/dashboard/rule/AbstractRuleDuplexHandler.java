@@ -150,7 +150,8 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
         switch (mode) {
             case ClusterStateManager.CLUSTER_SERVER:
                 if (!CollectionUtils.isEmpty(groupList)) {
-                    if (groupList.stream().anyMatch(group -> machineId.equals(group.getMachineId()))) {
+                    if (groupList.stream().anyMatch(group -> machineId.equals(group.getMachineId())
+                            || (ip.equals(group.getIp()) && port == group.getPort()))) {
                         break;
                     }
                 }
@@ -166,11 +167,12 @@ public abstract class AbstractRuleDuplexHandler implements DynamicRuleProvider<S
                 break;
             case ClusterStateManager.CLUSTER_NOT_STARTED:
                 // 从client set中剔除对应的ip
+                if (CollectionUtils.isEmpty(groupList)) {
+                    break;
+                }
                 clusterGroupEntity = getClusterGroupEntity(clusterClientConfigDataId, groupList);
                 clusterGroupEntity.getClientSet().remove(machineId);
-                if (machineId.equals(clusterGroupEntity.getMachineId())) {
-                    groupList.remove(clusterGroupEntity);
-                }
+                groupList.removeIf(group -> machineId.equals(group.getMachineId()));
                 break;
             default:
                 throw new IllegalArgumentException("argument 'mode' value " + mode + " is invalid.");
