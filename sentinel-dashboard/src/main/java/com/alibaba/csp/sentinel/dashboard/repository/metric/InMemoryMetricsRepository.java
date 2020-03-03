@@ -28,6 +28,7 @@ import com.alibaba.csp.sentinel.dashboard.datasource.entity.MetricEntity;
 import com.alibaba.csp.sentinel.util.StringUtil;
 
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,7 +40,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class InMemoryMetricsRepository implements MetricsRepository<MetricEntity> {
 
-    private static final long MAX_METRIC_LIVE_TIME_MS = 1000 * 60 * 5;
+    @Value("${sentinel.metric.max-live-time:600000}")
+    private long MAX_METRIC_LIVE_TIME_MS = 1000 * 60 * 60;
 
     /**
      * {@code app -> resource -> timestamp -> metric}

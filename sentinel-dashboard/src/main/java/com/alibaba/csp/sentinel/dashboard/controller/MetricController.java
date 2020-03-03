@@ -79,11 +79,12 @@ public class MetricController {
             endTime = System.currentTimeMillis();
         }
         if (startTime == null) {
-            startTime = endTime - 1000 * 60 * 5;
+            //startTime = endTime - 1000 * 60 * 5;
+            startTime = 0L;
         }
-        if (endTime - startTime > maxQueryIntervalMs) {
+        /*if (endTime - startTime > maxQueryIntervalMs) {
             return Result.ofFail(-1, "time intervalMs is too big, must <= 1h");
-        }
+        }*/
         List<String> resources = metricStore.listResourcesOfApp(app);
         logger.debug("queryTopResourceMetric(), resources.size()={}", resources.size());
 
